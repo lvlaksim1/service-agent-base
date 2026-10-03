@@ -1,0 +1,43 @@
+name: Service Agent Base CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Run Service Agent Base tests
+        run: python -m unittest discover -s tests -v
+      - name: Compile lifecycle modules
+        run: python -m compileall -q installer
+      - name: CLI help smoke
+        run: python installer/servicectl.py --help
+      - name: Install contract smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init -q -b main /tmp/service-agent-target
+          printf '# Service Agent target\n' > /tmp/service-agent-target/README.md
+          python installer/servicectl.py install \
+            --target /tmp/service-agent-target \
+            --repository lvlaksim1/service-agent-base-smoke \
+            --branch main \
+            --agent-id service-agent-base-smoke \
+            --role "Service Agent" \
+            --specialization "Lifecycle contract smoke" \
+            --source-commit "$GITHUB_SHA"
+          python installer/servicectl.py validate --target /tmp/service-agent-target
+          test -f /tmp/service-agent-target/.context/service-agent/CONTRACT.md
+          test -f /tmp/service-agent-target/.context/service-agent/identity.json
