@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Context Capsule Service Agent invocation",
+  "type": "object",
+  "required": [
+    "schema",
+    "schema_version",
+    "request_id",
+    "requester",
+    "objective",
+    "targets",
+    "authority_grant",
+    "deliverable",
+    "constraints",
+    "data_handling"
+  ],
+  "properties": {
+    "schema": {
+      "const": "context-capsule-service-invocation"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requester": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "owner",
+            "supervisor",
+            "project-manager",
+            "service-agent",
+            "other"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1
+    },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "minProperties": 1
+      }
+    },
+    "authority_grant": {
+      "type": "object",
+      "required": [
+        "mode",
+        "allowed_actions"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "advisory-only",
+            "read-only",
+            "bounded-write",
+            "custom"
+          ]
+        },
+        "allowed_actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "deliverable": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "data_handling": {
+      "type": "object",
+      "required": [
+        "persist_target_context",
+        "cross_target_reuse"
+      ],
+      "properties": {
+        "persist_target_context": {
+          "type": "boolean"
+        },
+        "cross_target_reuse": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

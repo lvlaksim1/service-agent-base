@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Context Capsule Service Agent identity",
+  "type": "object",
+  "required": [
+    "schema",
+    "schema_version",
+    "agent_id",
+    "agent_type",
+    "role",
+    "specialization",
+    "repository",
+    "continuity",
+    "ownership_model",
+    "authority_model",
+    "memory_model"
+  ],
+  "properties": {
+    "schema": {
+      "const": "context-capsule-service-agent-identity"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "agent_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"
+    },
+    "agent_type": {
+      "const": "service-agent"
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "specialization": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[^/]+/[^/]+$"
+    },
+    "continuity": {
+      "const": "runtime-independent"
+    },
+    "ownership_model": {
+      "const": "home-repository-not-client-target"
+    },
+    "authority_model": {
+      "const": "bounded-by-mandate-and-engagement"
+    },
+    "memory_model": {
+      "const": "professional-with-target-isolation"
+    }
+  },
+  "additionalProperties": true
+}

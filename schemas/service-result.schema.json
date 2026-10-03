@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Context Capsule Service Agent result",
+  "type": "object",
+  "required": [
+    "schema",
+    "schema_version",
+    "request_id",
+    "agent_id",
+    "status",
+    "summary",
+    "evidence",
+    "actions_performed",
+    "uncertainties",
+    "recommendations",
+    "escalation_required"
+  ],
+  "properties": {
+    "schema": {
+      "const": "context-capsule-service-result"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agent_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "partial",
+        "blocked",
+        "declined",
+        "escalated"
+      ]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "claim",
+          "source",
+          "authority"
+        ],
+        "properties": {
+          "claim": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "authority": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "actions_performed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "uncertainties": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "escalation_required": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": true
+}

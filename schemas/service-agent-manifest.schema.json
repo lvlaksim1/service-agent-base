@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Context Capsule Service Agent manifest",
+  "type": "object",
+  "required": [
+    "schema",
+    "schema_version",
+    "profile",
+    "profile_version",
+    "repository",
+    "agent_state_branch",
+    "entrypoint",
+    "capsule_metadata",
+    "agent",
+    "current",
+    "memory",
+    "runtime",
+    "sync_policy",
+    "profile_state"
+  ],
+  "properties": {
+    "schema": {
+      "const": "context-capsule-service-agent-manifest"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "profile": {
+      "const": "service-agent"
+    },
+    "profile_version": {
+      "const": "1.0.0-dev"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[^/]+/[^/]+$"
+    },
+    "agent_state_branch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agent": {
+      "type": "object",
+      "required": [
+        "contract",
+        "protocol",
+        "identity",
+        "mandate",
+        "capabilities",
+        "limitations",
+        "principal_model",
+        "invocation_contract",
+        "result_contract",
+        "beliefs",
+        "goals",
+        "intentions",
+        "plans",
+        "engagements"
+      ]
+    },
+    "current": {
+      "type": "object",
+      "required": [
+        "state",
+        "blockers",
+        "next"
+      ]
+    },
+    "memory": {
+      "type": "object",
+      "required": [
+        "index",
+        "semantic",
+        "procedural",
+        "episodes"
+      ]
+    },
+    "runtime": {
+      "type": "object",
+      "required": [
+        "checkpoint_is_capsule_state"
+      ],
+      "properties": {
+        "checkpoint_is_capsule_state": {
+          "const": false
+        }
+      }
+    },
+    "sync_policy": {
+      "type": "object",
+      "required": [
+        "semantic_only",
+        "professional_memory_only",
+        "target_context_isolated",
+        "target_authority_requires_explicit_grant",
+        "service_output_advisory_by_default",
+        "authority_transport_non_escalating",
+        "self_authority_expansion_forbidden"
+      ],
+      "properties": {
+        "semantic_only": {
+          "const": true
+        },
+        "professional_memory_only": {
+          "const": true
+        },
+        "target_context_isolated": {
+          "const": true
+        },
+        "target_authority_requires_explicit_grant": {
+          "const": true
+        },
+        "service_output_advisory_by_default": {
+          "const": true
+        },
+        "authority_transport_non_escalating": {
+          "const": true
+        },
+        "self_authority_expansion_forbidden": {
+          "const": true
+        }
+      }
+    },
+    "profile_state": {
+      "type": "object",
+      "required": [
+        "mandatory",
+        "optional"
+      ],
+      "properties": {
+        "mandatory": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "optional": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}
