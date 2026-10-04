@@ -10,6 +10,7 @@ from .safety import CapsuleSafetyError, normalize_repo_path, render_managed_bloc
 VERSION = "2.0.0-dev"
 
 SERVICE_AGENT_BASE_VERSION = "1.0.0-dev"
+SERVICE_AGENT_BASE_REPOSITORY = "lvlaksim1/service-agent-base"
 SERVICE_AGENT_IDENTITY_SCHEMA_VERSION = 1
 SERVICE_AGENT_MANIFEST_SCHEMA_VERSION = 1
 SERVICE_IDENTITY_PATH = ".context/service-agent/identity.json"
@@ -224,7 +225,9 @@ def build_service_manifest(repository: str, branch: str, *, existing: dict | Non
 
 
 def _metadata(repository: str, core_commit: str, *, existing: dict | None = None) -> dict:
-    validate_core_commit(core_commit)
+    # Historical internal name core_commit carries the Service Agent Base source
+    # commit. Keep it as a compatibility alias, but expose the semantic coordinate.
+    service_agent_base_commit = validate_core_commit(core_commit)
     result = copy.deepcopy(existing or {})
     result.update(
         {
@@ -232,8 +235,15 @@ def _metadata(repository: str, core_commit: str, *, existing: dict | None = None
             "version": VERSION,
             "profile": "service-agent",
             "profile_version": SERVICE_AGENT_BASE_VERSION,
-            "source": "lvlaksim1/service-agent-base",
-            "core_commit": core_commit,
+            "source": SERVICE_AGENT_BASE_REPOSITORY,
+            "core_commit": service_agent_base_commit,
+            "service_agent_base_commit": service_agent_base_commit,
+            "provenance": {
+                "service_agent_base": {
+                    "repository": SERVICE_AGENT_BASE_REPOSITORY,
+                    "commit": service_agent_base_commit,
+                }
+            },
             "installed_at": result.get("installed_at") or dt.date.today().isoformat(),
             "repository": repository,
             "update_policy": "manual",
@@ -411,10 +421,29 @@ def validate_service_snapshot(files: dict[str, str]) -> list[str]:
             errors.append("capsule.json: profile must be service-agent")
         if meta.get("profile_version") != SERVICE_AGENT_BASE_VERSION:
             errors.append(f"capsule.json: profile_version must be {SERVICE_AGENT_BASE_VERSION}")
-        try:
-            validate_core_commit(meta.get("core_commit", ""))
-        except CapsuleSafetyError as exc:
-            errors.append(f"capsule.json: {exc}")
+        provenance = meta.get("provenance")
+        if isinstance(provenance, dict):
+            service_base = provenance.get("service_agent_base")
+            if (
+                not isinstance(service_base, dict)
+                or service_base.get("repository") != SERVICE_AGENT_BASE_REPOSITORY
+            ):
+                errors.append("capsule.json: provenance.service_agent_base.repository is invalid")
+            try:
+                source_commit = validate_core_commit(
+                    service_base.get("commit", "") if isinstance(service_base, dict) else ""
+                )
+                if meta.get("service_agent_base_commit") not in (None, source_commit):
+                    errors.append("capsule.json: service_agent_base_commit disagrees with provenance")
+                if meta.get("core_commit") not in (None, source_commit):
+                    errors.append("capsule.json: deprecated core_commit alias disagrees with Service Agent Base provenance")
+            except CapsuleSafetyError as exc:
+                errors.append(f"capsule.json: {exc}")
+        else:
+            try:
+                validate_core_commit(meta.get("service_agent_base_commit") or meta.get("core_commit", ""))
+            except CapsuleSafetyError as exc:
+                errors.append(f"capsule.json: {exc}")
         if not isinstance(meta.get("repository"), str) or meta["repository"].count("/") != 1:
             errors.append("capsule.json: repository must be owner/name")
         if meta.get("update_policy") != "manual":
@@ -530,7 +559,7 @@ def _is_substantive(text: str | None) -> bool:
     if len(body) < 32:
         return False
     lower = body.lower()
-    return not any(pattern in lower for pattern in _PLACEHOLDER_PATTERNS)
+    return not any(lower.startswith(pattern) for pattern in _PLACEHOLDER_PATTERNS)
 
 
 def _has_provenance(text: str | None) -> bool:

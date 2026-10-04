@@ -22,6 +22,16 @@ Extracted without behavioral change from
 `lvlaksim1/context-capsule@7aa1e697504e686b02a4d7f1539a157214d5e692`,
 the exact Service Agent Base commit previously pinned by repo-factory.
 
+## Installed provenance
+
+New and repaired Service Agent installations record the exact Service Agent Base source coordinate
+as `service_agent_base_commit` and
+`provenance.service_agent_base = { repository, commit }`.
+
+The historical `core_commit` field is retained only as a deprecated compatibility alias for the
+same Service Agent Base commit. It does **not** mean Context Capsule Core. Legacy installed agents
+without the explicit field remain valid and are enriched by an explicit `servicectl repair`.
+
 ## CLI
 
 ```bash

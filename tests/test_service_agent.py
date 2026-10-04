@@ -137,6 +137,52 @@ class ServiceAgentBaseTests(unittest.TestCase):
         self.assertEqual(repaired[".context/service-agent/engagements.md"], before_engagements)
         self.assertEqual(json.loads(repaired[".context/capsule.json"])["core_commit"], "e" * 40)
 
+    def test_service_agent_base_provenance_is_explicit_and_legacy_alias_is_compatible(self):
+        installed = self.install(ready_overrides())
+        meta = json.loads(installed[".context/capsule.json"])
+        self.assertEqual(meta["service_agent_base_commit"], CORE_SHA)
+        self.assertEqual(meta["core_commit"], CORE_SHA)
+        self.assertEqual(
+            meta["provenance"]["service_agent_base"]["repository"],
+            "lvlaksim1/service-agent-base",
+        )
+        self.assertEqual(
+            meta["provenance"]["service_agent_base"]["commit"],
+            CORE_SHA,
+        )
+
+        legacy = json.loads(json.dumps(meta))
+        legacy.pop("service_agent_base_commit", None)
+        legacy.pop("provenance", None)
+        installed[".context/capsule.json"] = json.dumps(legacy)
+        self.assertEqual(validate_service_snapshot(installed), [])
+
+        repaired = apply(installed, service_repair_changes(
+            installed,
+            SERVICE_TEMPLATES,
+            repository="owner/service-agent",
+            branch="main",
+            core_commit="e" * 40,
+        ))
+        migrated = json.loads(repaired[".context/capsule.json"])
+        self.assertEqual(migrated["service_agent_base_commit"], "e" * 40)
+        self.assertEqual(migrated["core_commit"], "e" * 40)
+        self.assertEqual(
+            migrated["provenance"]["service_agent_base"]["commit"],
+            "e" * 40,
+        )
+
+    def test_substantive_service_state_can_contain_template_phrases_later(self):
+        overrides = ready_overrides()
+        overrides[".context/service-agent/plans.md"] = (
+            "# Plans\n\n"
+            "Verify the engagement against current evidence. "
+            "Capture the exact runtime result before revising professional memory."
+        )
+        installed = self.install(overrides)
+        ready, reasons = service_readiness_snapshot(installed)
+        self.assertTrue(ready, reasons)
+
     def test_runtime_checkpoint_is_not_service_agent_identity(self):
         installed = self.install(ready_overrides())
         installed[".context/runtime-checkpoint.json"] = '{"pending":"write-target"}'
