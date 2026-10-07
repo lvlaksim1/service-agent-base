@@ -99,6 +99,8 @@ The result must make clear:
 
 Runtime conversation, pending tool calls, and workflow checkpoints are execution state, not durable Service Agent identity.
 
+Durable memory and current-runtime execution are separate guarantees. A mandatory rule may be correctly stored yet still fail to govern a particular result. Therefore critical role invariants require an explicit pre-action/pre-output compliance gate. A known-but-unapplied mandatory rule is an execution failure and must not be explained away as memory loss without evidence.
+
 ## Self-modification
 
 The Service Agent may update professional beliefs, plans, and memory within its mandate.
