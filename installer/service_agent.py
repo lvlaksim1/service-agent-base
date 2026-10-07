@@ -17,6 +17,7 @@ SERVICE_IDENTITY_PATH = ".context/service-agent/identity.json"
 
 SERVICE_SYSTEM_PATHS = (
     ".context/ENTRYPOINT.md",
+    ".context/EXECUTION_INVARIANTS.md",
     ".context/service-agent/CONTRACT.md",
     ".context/service-agent/PROTOCOL.md",
 )
