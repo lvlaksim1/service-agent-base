@@ -605,6 +605,7 @@ def build_service_recovery_pack(files: dict[str, str], *, max_chars: int = 50000
     identity = _parse_json(files, agent["identity"]) or {}
 
     mandatory = [
+        ("EXECUTION INVARIANTS", ".context/EXECUTION_INVARIANTS.md"),
         ("SERVICE AGENT CONTRACT", agent["contract"]),
         ("SERVICE AGENT PROTOCOL", agent["protocol"]),
         ("SERVICE AGENT IDENTITY", agent["identity"]),
