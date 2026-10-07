@@ -89,6 +89,8 @@ class ServiceAgentBaseTests(unittest.TestCase):
         self.assertIn("Role: Service Agent", pack)
         self.assertIn("Specialization: Repository advisory services", pack)
         self.assertIn("new runtime instance of the existing Service Agent", pack)
+        self.assertIn("## EXECUTION INVARIANTS", pack)
+        self.assertIn("RULE_APPLIED", pack)
         self.assertIn("## SERVICE AGENT CONTRACT", pack)
         self.assertIn("## ACTIVE ENGAGEMENTS", pack)
 
