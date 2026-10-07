@@ -73,6 +73,10 @@ class ServiceAgentBaseTests(unittest.TestCase):
     def test_clean_install_is_valid_but_requires_professional_capture_for_ready(self):
         installed = self.install()
         self.assertEqual(validate_service_snapshot(installed), [])
+        self.assertIn(".context/EXECUTION_INVARIANTS.md", installed)
+        self.assertIn("RULE_KNOWN", installed[".context/EXECUTION_INVARIANTS.md"])
+        self.assertIn("EXECUTION_INVARIANT_VIOLATION", installed[".context/EXECUTION_INVARIANTS.md"])
+        self.assertIn(".context/EXECUTION_INVARIANTS.md", installed[".context/ENTRYPOINT.md"])
         ready, reasons = service_readiness_snapshot(installed)
         self.assertFalse(ready)
         self.assertTrue(reasons)
@@ -136,6 +140,8 @@ class ServiceAgentBaseTests(unittest.TestCase):
         self.assertEqual(repaired[".context/service-agent/beliefs.md"], before_beliefs)
         self.assertEqual(repaired[".context/service-agent/engagements.md"], before_engagements)
         self.assertEqual(json.loads(repaired[".context/capsule.json"])["core_commit"], "e" * 40)
+        self.assertIn(".context/EXECUTION_INVARIANTS.md", repaired)
+        self.assertIn("COMPLIANCE_CHECKED", repaired[".context/EXECUTION_INVARIANTS.md"])
 
     def test_service_agent_base_provenance_is_explicit_and_legacy_alias_is_compatible(self):
         installed = self.install(ready_overrides())
