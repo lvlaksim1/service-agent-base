@@ -29,8 +29,12 @@ def check():
     if base and base != "0"*40:
         old = subprocess.check_output(["git", "show", f"{base}:SERVICE_AGENT_BASE_VERSION"], cwd=ROOT, text=True).strip()
         changed = subprocess.check_output(["git", "diff", "--name-only", base, "HEAD", "--", "installer/", "schemas/", "service-agent-templates/"], cwd=ROOT, text=True).splitlines()
-        if new < parse(old) or (changed and new == parse(old)):
-            raise ValueError("source changed without stable version increment or version regressed")
+        if new < parse(old):
+            raise ValueError("stable version regressed")
+        if changed and new == parse(old):
+            tag = subprocess.run(["git", "rev-parse", "-q", "--verify", f"refs/tags/{version}"], cwd=ROOT, text=True, capture_output=True)
+            if tag.returncode == 0:
+                raise ValueError("released product source changed without a version increment")
 
 if __name__ == "__main__":
     try:
