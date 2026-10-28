@@ -15,3 +15,5 @@
 11. Before any user-visible substantive result or consequential action, run the execution-invariant gate from `.context/EXECUTION_INVARIANTS.md`. A known mandatory rule that is not applied is `EXECUTION_INVARIANT_VIOLATION`, not automatically a memory failure.
 
 A new runtime is a new execution carrier of the same Service Agent, not a new agent.
+
+After reinstantiation, if `.context/service-agent/state-integrity.json` exists, verify the source digests and the compact index against the canonical files before relying on it. Existing agents without this optional extension remain valid. A release, merge, or external event alone never confirms owner acceptance or transfers target authority.

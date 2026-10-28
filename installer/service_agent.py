@@ -7,9 +7,10 @@ import re
 from pathlib import Path
 
 from .safety import CapsuleSafetyError, normalize_repo_path, render_managed_block, validate_core_commit
-VERSION = "2.0.0-dev"
-
-SERVICE_AGENT_BASE_VERSION = "1.0.0-dev"
+VERSION = "2.0.0"
+SERVICE_AGENT_BASE_VERSION = "1.1.0"
+LEGACY_CAPSULE_VERSIONS = ("2.0.0-dev",)
+LEGACY_AGENT_VERSIONS = ("1.0.0-dev",)
 SERVICE_AGENT_BASE_REPOSITORY = "lvlaksim1/service-agent-base"
 SERVICE_AGENT_IDENTITY_SCHEMA_VERSION = 1
 SERVICE_AGENT_MANIFEST_SCHEMA_VERSION = 1
@@ -337,8 +338,10 @@ def service_repair_changes(
     meta = _parse_json(files, ".context/capsule.json") or {}
     manifest = _parse_json(files, ".context/manifest.json") or {}
     identity = _parse_json(files, SERVICE_IDENTITY_PATH) or {}
-    if meta.get("version") != VERSION or meta.get("profile") != "service-agent":
+    if meta.get("version") not in (VERSION, *LEGACY_CAPSULE_VERSIONS) or meta.get("profile") != "service-agent":
         raise ServiceAgentModelError("service-agent repair requires an installed v2 service-agent profile")
+    if meta.get("profile_version") not in (SERVICE_AGENT_BASE_VERSION, *LEGACY_AGENT_VERSIONS):
+        raise ServiceAgentModelError("unsupported installed Service Agent Base version")
     if manifest.get("agent_state_branch") != branch:
         raise ServiceAgentModelError(
             f"service-agent repair must run against agent state branch {manifest.get('agent_state_branch')!r}"
@@ -416,12 +419,12 @@ def validate_service_snapshot(files: dict[str, str]) -> list[str]:
     else:
         if meta.get("schema") != "context-capsule":
             errors.append("capsule.json: invalid schema")
-        if meta.get("version") != VERSION:
-            errors.append(f"capsule.json: version must be {VERSION}")
+        if meta.get("version") not in (VERSION, *LEGACY_CAPSULE_VERSIONS):
+            errors.append(f"capsule.json: unsupported version {meta.get('version')!r}")
         if meta.get("profile") != "service-agent":
             errors.append("capsule.json: profile must be service-agent")
-        if meta.get("profile_version") != SERVICE_AGENT_BASE_VERSION:
-            errors.append(f"capsule.json: profile_version must be {SERVICE_AGENT_BASE_VERSION}")
+        if meta.get("profile_version") not in (SERVICE_AGENT_BASE_VERSION, *LEGACY_AGENT_VERSIONS):
+            errors.append("capsule.json: unsupported Service Agent Base version")
         provenance = meta.get("provenance")
         if isinstance(provenance, dict):
             service_base = provenance.get("service_agent_base")
@@ -468,8 +471,10 @@ def validate_service_snapshot(files: dict[str, str]) -> list[str]:
             )
         if manifest.get("profile") != "service-agent":
             errors.append("manifest.json: profile must be service-agent")
-        if manifest.get("profile_version") != SERVICE_AGENT_BASE_VERSION:
-            errors.append(f"manifest.json: profile_version must be {SERVICE_AGENT_BASE_VERSION}")
+        if manifest.get("profile_version") not in (SERVICE_AGENT_BASE_VERSION, *LEGACY_AGENT_VERSIONS):
+            errors.append("manifest.json: unsupported Service Agent Base version")
+        if meta and manifest.get("profile_version") != meta.get("profile_version"):
+            errors.append("manifest.json: profile_version must agree with installed capsule")
         if meta and manifest.get("repository") != meta.get("repository"):
             errors.append("manifest.json repository does not match capsule.json")
         if not isinstance(manifest.get("agent_state_branch"), str) or not manifest.get("agent_state_branch"):
@@ -540,6 +545,9 @@ def validate_service_snapshot(files: dict[str, str]) -> list[str]:
         if meta and identity.get("repository") != meta.get("repository"):
             errors.append("service-agent identity repository does not match capsule repository")
 
+    if ".context/service-agent/state-integrity.json" in files:
+        from .durable_state import verify_durable_state
+        errors.extend(verify_durable_state(files))
     return errors
 
 

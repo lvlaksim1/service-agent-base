@@ -29,7 +29,7 @@
       "const": "service-agent"
     },
     "profile_version": {
-      "const": "1.0.0-dev"
+      "enum": ["1.0.0-dev", "1.1.0"]
     },
     "repository": {
       "type": "string",
