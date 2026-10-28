@@ -12,6 +12,8 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from installer.safety import CapsuleSafetyError, confined_local_path, validate_core_commit
+from installer.durable_state import (DurableStateError, EVENTS, verify_durable_state, sealed_changes, event_changes, INDEX)
+from installer.github_publish import publish_files
 from installer.service_agent import (
     ServiceAgentModelError,
     build_service_recovery_pack,
@@ -158,6 +160,66 @@ def cmd_recover(args) -> int:
     sys.stdout.write(pack)
     return 0
 
+def cmd_durable_audit(args) -> int:
+    snapshot = load_snapshot(target_root(args.target))
+    problems = validate_service_snapshot(snapshot)
+    if problems:
+        for item in problems:
+            print("  - " + item)
+        print("Durable Service Agent audit: FAIL")
+        return 1
+    if ".context/service-agent/state-integrity.json" not in snapshot:
+        print("Durable Service Agent audit: LEGACY / NOT INITIALIZED")
+        return 0
+    print("Durable Service Agent audit: PASS")
+    return 0
+
+
+def cmd_working_index(args) -> int:
+    files = load_snapshot(target_root(args.target))
+    problems = verify_durable_state(files)
+    if problems:
+        print("Working index: FAIL: " + "; ".join(problems))
+        return 1
+    if INDEX not in files:
+        print("Working index: NOT INITIALIZED")
+        return 1
+    sys.stdout.write(files[INDEX])
+    return 0
+
+
+def cmd_durable_plan(args) -> int:
+    try:
+        target = target_root(args.target)
+        snapshot = load_snapshot(target)
+        problems = validate_service_snapshot(snapshot)
+        if problems:
+            raise DurableStateError("; ".join(problems))
+        if args.init:
+            changes = sealed_changes(snapshot, first=True)
+            label = "initialize sealed professional state"
+        else:
+            payload = json.loads(Path(args.event).read_text(encoding="utf-8"))
+            changes = event_changes(snapshot, payload)
+            label = f"record durable Service Agent event {payload.get('id')}"
+        if not args.publish:
+            print(json.dumps({"status": "PLAN_ONLY", "changed_paths": sorted(changes)}, indent=2))
+            return 0
+        if not args.expected_head:
+            raise DurableStateError("--expected-head required for publication")
+        meta = json.loads(snapshot[".context/capsule.json"])
+        manifest = json.loads(snapshot[".context/manifest.json"])
+        commit = publish_files(
+            snapshot, changes, meta["repository"], manifest["agent_state_branch"],
+            args.expected_head, message="service-agent: " + label,
+        )
+        print(json.dumps({"status": "PUBLISHED", "commit": commit, "changed_paths": sorted(changes)}, indent=2))
+        return 0
+    except (DurableStateError, OSError, ValueError, KeyError) as exc:
+        print(f"Durable Service Agent operation: FAIL\n  - {exc}")
+        return 1
+
+
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="servicectl", description="Service Agent Base lifecycle helper")
     sub = p.add_subparsers(dest="command", required=True)
@@ -191,6 +253,23 @@ def parser() -> argparse.ArgumentParser:
     rc.add_argument("--target", required=True)
     rc.add_argument("--max-chars", type=int, default=50000)
     rc.set_defaults(func=cmd_recover)
+
+    audit = sub.add_parser("durable-audit", help="validate optional durable state and coherence")
+    audit.add_argument("--target", required=True)
+    audit.set_defaults(func=cmd_durable_audit)
+
+    plan = sub.add_parser("durable-plan", help="preview or atomically publish durable service state")
+    plan.add_argument("--target", required=True)
+    mode = plan.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--init", action="store_true", help="explicitly initialize the durable state seal")
+    mode.add_argument("--event", help="JSON evidence-backed event to append")
+    plan.add_argument("--expected-head", help="exact expected GitHub branch HEAD SHA")
+    plan.add_argument("--publish", action="store_true", help="publish one non-forced GitHub commit")
+    plan.set_defaults(func=cmd_durable_plan)
+
+    index = sub.add_parser("working-index", help="verify and print compact non-authoritative index")
+    index.add_argument("--target", required=True)
+    index.set_defaults(func=cmd_working_index)
     return p
 
 def main() -> int:

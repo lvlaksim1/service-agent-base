@@ -263,3 +263,96 @@ class ServiceAgentBaseTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class ServiceAgentDurableTests(unittest.TestCase):
+    def setUp(self):
+        from installer.service_agent import service_clean_install_changes
+        from installer.durable_state import EVENTS, COMMITMENTS, SEAL, INDEX
+        self.paths = (EVENTS, COMMITMENTS, SEAL, INDEX)
+        self.files = apply({}, service_clean_install_changes(
+            {}, SERVICE_TEMPLATES, "owner/agent", "main", CORE_SHA,
+            "durable-agent", "Service Agent", "Evidence evaluation",
+            semantic_overrides=ready_overrides()
+        ))
+
+    def test_numeric_versions_and_legacy_repair(self):
+        from installer.service_agent import VERSION, SERVICE_AGENT_BASE_VERSION
+        self.assertEqual(VERSION, "2.0.0")
+        self.assertEqual(SERVICE_AGENT_BASE_VERSION, "1.1.0")
+        capsule = json.loads(self.files[".context/capsule.json"])
+        manifest = json.loads(self.files[".context/manifest.json"])
+        capsule["version"] = "2.0.0-dev"
+        capsule["profile_version"] = "1.0.0-dev"
+        manifest["profile_version"] = "1.0.0-dev"
+        self.files[".context/capsule.json"] = json.dumps(capsule)
+        self.files[".context/manifest.json"] = json.dumps(manifest)
+        self.assertEqual(validate_service_snapshot(self.files), [])
+        repaired = apply(self.files, service_repair_changes(
+            self.files, SERVICE_TEMPLATES, "owner/agent", "main", "e" * 40
+        ))
+        self.assertEqual(validate_service_snapshot(repaired), [])
+        self.assertEqual(json.loads(repaired[".context/capsule.json"])["version"], "2.0.0")
+        self.assertEqual(json.loads(repaired[".context/capsule.json"])["profile_version"], "1.1.0")
+
+    def test_durable_initialize_preserves_professional_text(self):
+        from installer.durable_state import sealed_changes, verify_durable_state, INDEX
+        old = self.files[".context/service-agent/intentions.md"]
+        installed = apply(self.files, sealed_changes(self.files, first=True))
+        self.assertEqual(installed[".context/service-agent/intentions.md"], old)
+        self.assertEqual(validate_service_snapshot(installed), [])
+        self.assertEqual(verify_durable_state(installed), [])
+        idx = json.loads(installed[INDEX])
+        self.assertTrue(idx["legacy_engagements_must_be_read"])
+        self.assertTrue(idx["legacy_intentions_must_be_read"])
+        self.assertEqual(idx["active_ids"], [])
+        self.assertEqual(idx["freshness"], "NOT_CHECKED")
+
+    def test_event_open_and_completion_require_owner_acceptance(self):
+        from installer.durable_state import sealed_changes, event_changes, DurableStateError, COMMITMENTS, EVENTS
+        source = apply(self.files, sealed_changes(self.files, first=True))
+        opened = {"id": "evt-release-1", "kind": "verified-release",
+                  "summary": "A release was published but owner acceptance is unverified.",
+                  "evidence": {"source": "github", "reference": "https://github.com/owner/project/releases/tag/1.0.0",
+                               "verified_by": "operator"},
+                  "commitments": [{"id": "acceptance", "action": "open",
+                                   "statement": "Obtain direct owner acceptance of the release.",
+                                   "owner": "supervisor", "requires_owner_acceptance": True}]}
+        source = apply(source, event_changes(source, opened))
+        self.assertEqual(validate_service_snapshot(source), [])
+        state = json.loads(source[COMMITMENTS])["items"]["acceptance"]
+        self.assertEqual(state["status"], "active")
+        terminal = {"id": "evt-ci-1", "kind": "verified-fact",
+                    "summary": "An unrelated CI check completed and was inspected.",
+                    "evidence": {"source": "github", "reference": "https://github.com/owner/project/actions/runs/1",
+                                 "verified_by": "operator"},
+                    "commitments": [{"id": "acceptance", "action": "complete",
+                                     "reason": "CI passed but owner was not consulted"}]}
+        with self.assertRaisesRegex(DurableStateError, "owner acceptance"):
+            event_changes(source, terminal)
+        confirmed = {**terminal, "id": "evt-owner-1", "kind": "owner-decision", "owner_confirmed": True}
+        final = apply(source, event_changes(source, confirmed))
+        self.assertEqual(json.loads(final[COMMITMENTS])["items"]["acceptance"]["status"], "completed")
+        self.assertEqual(validate_service_snapshot(final), [])
+        with self.assertRaisesRegex(DurableStateError, "already recorded"):
+            event_changes(final, confirmed)
+        self.assertEqual(len(json.loads(final[EVENTS])["events"]), 2)
+
+    def test_mutating_canonical_state_breaks_seal(self):
+        from installer.durable_state import sealed_changes, verify_durable_state
+        source = apply(self.files, sealed_changes(self.files, first=True))
+        source[".context/service-agent/engagements.md"] += "\nUnsealed action."
+        self.assertTrue(any("engagements.md" in err for err in verify_durable_state(source)))
+        self.assertTrue(any("engagements.md" in err for err in validate_service_snapshot(source)))
+
+    def test_profile_mandatory_files_are_sealed(self):
+        from installer.durable_state import sealed_changes, verify_durable_state
+        self.files[".context/supervisor/projects.md"] = "# Portfolio\n\nProject A"
+        manifest = json.loads(self.files[".context/manifest.json"])
+        manifest["profile_state"]["mandatory"].append(".context/supervisor/projects.md")
+        self.files[".context/manifest.json"] = json.dumps(manifest)
+        source = apply(self.files, sealed_changes(self.files, first=True))
+        self.assertEqual(validate_service_snapshot(source), [])
+        source[".context/supervisor/projects.md"] += " updated"
+        self.assertTrue(any("projects.md" in err for err in verify_durable_state(source)))
+
+

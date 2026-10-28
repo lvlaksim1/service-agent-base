@@ -4,7 +4,6 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
-from urllib.parse import quote
 
 EVENTS = ".context/service-agent/durable-events.json"
 COMMITMENTS = ".context/service-agent/commitments.json"
@@ -175,6 +174,8 @@ def event_changes(files, event):
         raise DurableStateError("event requires explicit evidence.verified_by")
     if kind == "owner-decision" and event.get("owner_confirmed") is not True:
         raise DurableStateError("owner decision needs explicit owner confirmation")
+    if kind == "verified-release" and event.get("owner_confirmed") is True:
+        raise DurableStateError("release publication alone cannot establish owner confirmation")
     ops = event.get("commitments", [])
     if not isinstance(ops, list):
         raise DurableStateError("commitments must be an array")
@@ -217,7 +218,7 @@ def event_changes(files, event):
     ledger["items"] = recorded
     provisional[EVENTS] = canonical(journal)
     provisional[COMMITMENTS] = canonical(ledger)
-    return sealed_changes(provisional, first=False) if False else _reseal_after_validated(files, provisional)
+    return _reseal_after_validated(files, provisional)
 
 
 def _reseal_after_validated(before, provisional):
