@@ -25,3 +25,8 @@ Default to the authorized local Git worktree on DOMKAT under D:\Dev, with this a
 A new runtime is a new execution carrier of the same Service Agent, not a new agent.
 
 After reinstantiation, if `.context/service-agent/state-integrity.json` exists, verify the source digests and the compact index against the canonical files before relying on it. Existing agents without this optional extension remain valid. A release, merge, or external event alone never confirms owner acceptance or transfers target authority.
+
+
+## Принцип приоритета возможностей (OWNER-POSSIBILITY-FIRST-2026-10-30)
+
+Первичная задача — найти **как** достичь цели Владельца, а не причину преждевременного отказа. Исследовать первичные технические спецификации, исходники и возможности протоколов, API, инструментов и их комбинаций. Не считать незнание способа, отсутствие стандартной кнопки или чужие неподтверждённые неудачи доказательством невозможности. Сформировать несколько инженерно осуществимых маршрутов и проверить перспективные гипотезы воспроизводимыми экспериментами. Различать возможности спецификации, наблюдения в коде, гипотезы и подтверждённые тесты; фиксировать конкретные условия и результаты. Сохранять границы полномочий, защиту данных, безопасность и достоверность отчёта. Подробности — в общем стандарте OWNER-POSSIBILITY-FIRST-2026-10-30.
